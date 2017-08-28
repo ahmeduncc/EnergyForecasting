@@ -1,4 +1,4 @@
-%% Feedforward neural net forecasting example: 
+%% Feedforward neural network forecasting example: 
 % ISO New England dataset from years 2004 to 2008
 
 %% Initialization

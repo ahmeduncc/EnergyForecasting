@@ -1,1 +1,1 @@
-BFH Project 2: forecasting energy production and consumption using machine learning methods 
+BFH Project 2: energy production and consumption forecasting using machine learning methods 

@@ -1,4 +1,9 @@
-%% NARX forecasting example: Change38 consumer
+%% Feedforward neural net forecasting example: Change38 consumers
+
+%% Initialization
+clear; close all; clc;
+
+%% load meteomatics data
 
 % version = 'matlab_v_1.1';
 % user   = 'bfh';
@@ -12,6 +17,7 @@
 % parameters = 't_2m:C,dew_point_2m:C'; 
 % [dn, meteoData] = time_series_query(user, pwd, server, start_datum, period, ...
 %     resolution, parameters, lat, lon);
+load '..\Meteomatics\Data\MeteomaticsData_20170624.mat';
 
 %%  load COPCO consumer data
 
@@ -46,9 +52,11 @@ userId = 'auth0|5819e9ee2602198a6e5483c1';
 % userId = 'auth0|58ab0e9ded51fc08e61efada';
 %userId = 'auth0|5887de343856aa3546ca0037';
 
-rows = Production_HOUR_CONSUMPTION_20170624.USER_ID == userId;
+load 'Data\HOUR_CONSUMPTION_20170624.mat';
+
+rows = HOUR_CONSUMPTION_20170624.USER_ID == userId;
 vars = {'START_MILIS', 'CONSUMED_ENERGY'};
-consumerData = Production_HOUR_CONSUMPTION_20170624{rows, vars};
+consumerData = HOUR_CONSUMPTION_20170624{rows, vars};
 
 %% add missing values
 
@@ -82,6 +90,18 @@ dateIndex = datenum(fullDateList) >= datenum('2017-02-01') & ...
 dates = fullDateList(dateIndex);
 target = inputData(dateIndex, 2);
 
+%% smooth curve and calculate avg per day
+
+% target = filter(ones(1,4)/4, 1, target);
+targetsPerDay = reshape(target, [24,143])';
+avgPerDay = mean(targetsPerDay);
+testAvg = repmat(avgPerDay,1,14)';
+
+%% replace anomalies with default (avg) values
+
+anomalyRange = 1177:(1177 + 9*24 - 1);
+target(anomalyRange) = repmat(avgPerDay,1,9)';
+
 %% create feature matrix
 
 % weather data
@@ -91,7 +111,6 @@ dewPoint = meteoData(dateIndex,2);
 % date predictors
 hourOfDay = hour(dates);
 dayOfWeek = weekday(dates);
-dayOfMonth = day(dates);
 monthOfYear = month(dates);
 
 % lagged load inputs
@@ -100,9 +119,39 @@ prevWeekSameHourLoad = [NaN(168,1); target(1:end-168)];
 prev24HrAveLoad = filter(ones(1,24)/24, 1, target);
 
 % feature matrix
-X = [temperature dewPoint hourOfDay dayOfWeek];
+% X = [temperature dewPoint hourOfDay dayOfWeek prevDaySameHourLoad ...
+% prevWeekSameHourLoad prev24HrAveLoad];
+X = [temperature dewPoint hourOfDay dayOfWeek prevDaySameHourLoad ...
+    prevWeekSameHourLoad prev24HrAveLoad];
 
-%% Split the dataset to create a Training and Test set
+%% plot current energy consumption
+
+figure;
+plot(dates, target, 'b');
+% stem(dates, target, 'b', 'marker', 'none');
+title(['Energieverbrauch Kunde ' userId]);
+xlabel('Tage');
+ylabel('Wh');
+axis tight;
+
+minDate = dates(1);
+maxDate = dates(end);
+display(minDate);
+display(maxDate);
+
+%% plot weather data
+
+figure;
+hold on;
+plot(dates, temperature, 'b');
+plot(dates, dewPoint, 'r');
+title('Wetterdaten Meteomatics');
+xlabel('Tag');
+ylabel('Temperatur und Taupunkt [C]');
+axis tight;
+hold off;
+
+%% split the dataset to create a Training and Test set
 
 % create training set
 trainInd = datenum(dates) < datenum('2017-06-01');
@@ -117,45 +166,22 @@ testX = X(testInd,:);
 testY = target(testInd);
 testDates = dates(testInd);
 
-%% Initialize and Train NARX Network
+%% initialize and train network
 
-trainXcell = tonndata(trainX,false,false);
-trainYcell = tonndata(trainY,false,false);
-
-% Choose a Training Function
-% For a list of all training functions type: help nntrain
-% 'trainlm' is usually fastest.
-% 'trainbr' takes longer but may be better for challenging problems.
-% 'trainscg' uses less memory. Suitable in low memory situations.
+% Create a Fitting Network
 trainFcn = 'trainlm';  % Levenberg-Marquardt backpropagation.
-
-% Create a Nonlinear Autoregressive Network with External Input
-maxDelay = 14;
-inputDelays = 1:maxDelay;
-feedbackDelays = 1:maxDelay;
 hiddenLayerSize = 20;
-net = narxnet(inputDelays,feedbackDelays,hiddenLayerSize,'open',trainFcn);
+net = fitnet(hiddenLayerSize,trainFcn);
 
-% Choose Input and Feedback Pre/Post-Processing Functions
-% Settings for feedback input are automatically applied to feedback output
+% Choose Input and Output Pre/Post-Processing Functions
 % For a list of all processing functions type: help nnprocess
-% Customize input parameters at: net.inputs{i}.processParam
-% Customize output parameters at: net.outputs{i}.processParam
-net.inputs{1}.processFcns = {'removeconstantrows','mapminmax'};
-net.inputs{2}.processFcns = {'removeconstantrows','mapminmax'};
-
-% Prepare the Data for Training and Simulation
-% The function PREPARETS prepares timeseries data for a particular network,
-% shifting time by the minimum amount to fill input states and layer
-% states. Using PREPARETS allows you to keep your original time series data
-% unchanged, while easily customizing it for networks with differing
-% numbers of delays, with open loop or closed loop feedback modes.
-[Xs,Xi,Ai,Ts] = preparets(net,trainXcell,{},trainYcell);
+net.input.processFcns = {'removeconstantrows','mapminmax'};
+net.output.processFcns = {'removeconstantrows','mapminmax'};
 
 % Setup Division of Data for Training, Validation, Testing
 % For a list of all data division functions type: help nndivide
 net.divideFcn = 'dividerand';  % Divide data randomly
-net.divideMode = 'time';  % Divide up every sample
+net.divideMode = 'sample';  % Divide up every sample
 net.divideParam.trainRatio = 70/100;
 net.divideParam.valRatio = 15/100;
 net.divideParam.testRatio = 15/100;
@@ -163,35 +189,37 @@ net.divideParam.testRatio = 15/100;
 % Choose a Performance Function
 % For a list of all performance functions type: help nnperformance
 net.performFcn = 'mse';  % Mean Squared Error
+% net.performFcn = 'mae';
 
 % Choose Plot Functions
 % For a list of all plot functions type: help nnplot
-net.plotFcns = {'plotperform','plottrainstate', 'ploterrhist', ...
-    'plotregression', 'plotresponse', 'ploterrcorr', 'plotinerrcorr'};
+net.plotFcns = {'plotperform','plottrainstate','ploterrhist', ...
+    'plotregression', 'plotfit'};
 
 % Train the Network
-[net,tr] = train(net,Xs,Ts,Xi,Ai);
+[net,tr] = train(net, trainX', trainY');
 
-%% Test Network on trainX dataset
+%% test the Network
 
-y = net(Xs,Xi,Ai);
-performance = perform(net,Ts,y)
+y = net(trainX')';
+e = gsubtract(trainY,y);
+performance = perform(net,trainY,y)
 
 % Recalculate Training, Validation and Test Performance
-trainTargets = gmultiply(Ts,tr.trainMask);
-valTargets = gmultiply(Ts,tr.valMask);
-testTargets = gmultiply(Ts,tr.testMask);
+trainTargets = trainY.* tr.trainMask{1}';
+valTargets = trainY.* tr.valMask{1}';
+testTargets = trainY.* tr.testMask{1}';
 trainPerformance = perform(net,trainTargets,y)
 valPerformance = perform(net,valTargets,y)
 testPerformance = perform(net,testTargets,y)
 
-e = cell2mat(gsubtract(Ts,y))';
-errpct = abs(e)./cell2mat(Ts)'*100;
-maePerformance = mean(abs(e))
-mapePerformance = mean(errpct(~isinf(errpct)))
+maePerformance = mean(abs(e(169:end)))
+
+figure;
+fitPlot(trainDates, [trainY y], e);
 
 % View the Network
-% view(net)
+view(net);
 
 % Plots
 % Uncomment these lines to enable various plots.
@@ -199,70 +227,51 @@ mapePerformance = mean(errpct(~isinf(errpct)))
 %figure, plottrainstate(tr)
 %figure, ploterrhist(e)
 %figure, plotregression(t,y)
-%figure, plotresponse(t,y)
-%figure, ploterrcorr(e)
-%figure, plotinerrcorr(x,e)
+%figure, plotfit(net,x,t)
 
+forecastLoad = net(testX')';
+err = testY-forecastLoad;
 figure;
-fitPlot(trainDates((maxDelay+1):end), [cell2mat(Ts)' cell2mat(y)'], e);
+fitPlot(testDates, [testY forecastLoad], err);
 
-%% Test Network on testX dataset
-
-testXcell = tonndata(testX,false,false);
-testYcell = tonndata(testY,false,false);
-
-[Xst,Xit,Ait,Tst] = preparets(net,testXcell,{},testYcell);
-
-forecastLoad = net(Xst,Xit,Ait);
-err = cell2mat(Tst)'-cell2mat(forecastLoad)';
-
-figure;
-fitPlot(testDates((maxDelay+1):end), [cell2mat(Tst)' cell2mat(forecastLoad)'], err);
-
-errpct = abs(err)./cell2mat(Tst)'*100;
+errpct = abs(err)./testY*100;
 
 MAE = mean(abs(err));
 MAPE = mean(errpct(~isinf(errpct)));
-MSE = mse(net, Tst, forecastLoad);
+MSE = mse(net, testY, forecastLoad);
 
-fprintf('Trained ANN, test set: Mean Absolute Percent Error (MAPE): %0.3f%% \nMean Absolute Error (MAE): %0.4f Wh\nMean Squared Error (MSE): %0.4f Wh\n',...
+fprintf('Trained ANN, test set: \nMean Absolute Percent Error (MAPE): %0.3f%% \nMean Absolute Error (MAE): %0.4f Wh\nMean Squared Error (MSE): %0.4f Wh\n',...
     MAPE, MAE, MSE)
 fprintf('\n');
 
-%% Closed Loop Network
+%% plot avg default values
 
-% Closed Loop Network
-% Use this network to do multi-step prediction.
-% The function CLOSELOOP replaces the feedback input with a direct
-% connection from the outout layer.
-netc = closeloop(net);
-netc.name = [net.name ' - Closed Loop'];
-% view(netc)
-[Xs_cl,Xi_cl,Ai_cl,Ts_cl] = preparets(netc,testXcell,{},testYcell);
-Yc = netc(Xs_cl,Xi_cl,Ai_cl);
-
-numPredictions = 24;
-for i = 1:numPredictions
-    closedLoopRange = 1:i;
-    errcl = cell2mat(Ts_cl(closedLoopRange))' - cell2mat(Yc(closedLoopRange))';
-    errpct = abs(errcl)./cell2mat(Ts_cl(closedLoopRange))'*100;
-    closedLoopMAPE = mean(errpct(~isinf(errpct)));
-    fprintf('Closed loop prediction: hour: %i, MAPE: %0.3f%%', i, closedLoopMAPE);
-    fprintf('\n');
-end
-
-closedLoopMSE = perform(net,Ts_cl(1:numPredictions),Yc(1:numPredictions))
-closedLoopMAE = mean(abs(cell2mat(Ts_cl(1:numPredictions))'-cell2mat(Yc(1:numPredictions))'))
+predictionsPerDay = reshape(forecastLoad, [24,14])';
+predictAvgPerDay = mean(predictionsPerDay);
+dayRange = 1:24;
 
 figure;
 hold on;
-timeDisplayRange = (maxDelay + 1):(maxDelay + numPredictions*2);
-valueDisplayRange = 1:numPredictions*2;
-plot(testDates(timeDisplayRange), cell2mat(Ts_cl(valueDisplayRange))', 'b');
-plot(testDates(timeDisplayRange), cell2mat(Yc(valueDisplayRange))', 'r');
-title('Closed Loop: erwarteter und vorhergesagter Energieverbrauch');
-xlabel('Stunden');
-ylabel('Energieverbrauch [MWh]');
-legend('Erwartete Werte', 'Vorhergesagte Werte')
+plot(dayRange, avgPerDay, 'b');
+plot(dayRange, predictAvgPerDay, 'r');
+title('Durchschnittswerte im Tagesverlauf');
+xlabel('Tagesstunden');
+ylabel('Erwartete (b) und vorhergesagte (r) Werte [Wh]');
 axis tight;
 hold off;
+
+err = testY-testAvg;
+
+figure();
+fitPlot(testDates, [testY testAvg], err);
+
+errpct = abs(err)./testY*100;
+
+MAE = mean(abs(err));
+MAPE = mean(errpct(~isinf(errpct)));
+MSE = mse(net, testY, testAvg);
+
+fprintf('Avg values: Mean Absolute Percent Error (MAPE): %0.3f%% \nMean Absolute Error (MAE): %0.4f Wh\nMean Squared Error (MSE): %0.4f Wh\n',...
+    MAPE, MAE, MSE)
+fprintf('\n');
+

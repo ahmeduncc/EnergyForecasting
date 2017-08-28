@@ -1,4 +1,7 @@
-% Energy consumer NARX forecast example
+%% NARX forecasting example 1: Change38 consumer
+
+%% Initialization
+clear; close all; clc;
 
 %% load meteomatics data
 
@@ -16,11 +19,12 @@
 %     resolution, parameters, lat, lon);
 % temperature = data(:,1); 
 % dewPoint = data(:,2); 
+load '..\Meteomatics\Data\MeteomaticsData_Consumer.mat';
 
 %% load COPCO consumer data and add missing values
 
-consumerData = load('Data/Consumer1_Andreas_Aeberhard_20170608.txt');
-% consumerData = load('Data/Consumer4_Niklaus_Freuler_20170419.txt');
+consumerData = load('..\..\Data\Change38_Consumer\Consumer1_Andreas_Aeberhard_20170608.txt');
+% consumerData = load('..\..\Data\Change38_Consumer_Niklaus_Freuler_20170419.txt');
 
 i = 1;
 j = 1;

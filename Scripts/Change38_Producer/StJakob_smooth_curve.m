@@ -1,6 +1,6 @@
-% smooth energy production curve test
+% Smooth energy production curve St. Jakobstatium
 
-producerData = load('Data/Producer_StJakobstadium.txt');
+producerData = load('..\..\Data\Change38_Producer\Producer_StJakobstadium.txt');
 start = producerData(1,1);
 x = (producerData(:,1) - start)/(24*60*60*1000);
 y = producerData(:,3)/10^3;

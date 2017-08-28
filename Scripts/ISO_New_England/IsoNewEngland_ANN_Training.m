@@ -1,9 +1,13 @@
-%% ANN forecasting example: ISO New England dataset for the years 2004 to 2008
+%% Feedforward neural net forecasting example: 
+% ISO New England dataset from years 2004 to 2008
 
-%% Load New England ISO dataset for the years 2004 to 2008
+%% Initialization
+clear; close all; clc;
 
-load 'G:\Daten\Programming\Matlab\Examples\Electricity Load & Price Forecasting\Load\Data\DBLoadData.mat'
-addpath 'G:\Daten\Programming\Matlab\Examples\Electricity Load & Price Forecasting\Util'
+%% Load ISO New England dataset
+
+load '..\..\..\Examples\Electricity Load & Price Forecasting\Load\Data\DBLoadData.mat';
+% addpath 'G:\Daten\Programming\Matlab\Examples\Electricity Load & Price Forecasting\Util'
 
 dates = datetime(data.NumDate,'ConvertFrom','datenum');
 target = data.SYSLoad;
@@ -27,8 +31,8 @@ prev24HrAveLoad = filter(ones(1,24)/24, 1, target);
 % feature matrix
 % X = [temperature dewPoint hourOfDay dayOfWeek prevDaySameHourLoad ...
 %     prevWeekSameHourLoad prev24HrAveLoad];
-X = [temperature dewPoint hourOfDay dayOfWeek prevDaySameHourLoad ...
-    prevWeekSameHourLoad prev24HrAveLoad monthOfYear];
+X = [temperature dewPoint hourOfDay dayOfWeek monthOfYear prevDaySameHourLoad ...
+    prevWeekSameHourLoad prev24HrAveLoad];
 
 %% Split the dataset to create a Training and Test set
 
@@ -44,7 +48,7 @@ testX = X(testInd,:);
 testY = target(testInd);
 testDates = dates(testInd);
 
-%% Initialize and Train ANN 
+%% Initialize and train ANN 
 
 % Create a Fitting Network
 trainFcn = 'trainlm';  % Levenberg-Marquardt backpropagation.
@@ -77,7 +81,7 @@ net.plotFcns = {'plotperform','plottrainstate','ploterrhist', ...
 % Train the Network
 [net,tr] = train(net, trainX', trainY');
 
-%% Test the Network
+%% Test the model
 
 y = net(trainX')';
 e = gsubtract(trainY,y);

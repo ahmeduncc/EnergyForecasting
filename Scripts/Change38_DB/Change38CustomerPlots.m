@@ -1,7 +1,12 @@
-% COPCO database analysis
+% Plots some Change38 producers and consumers from COPCO database
 
-producerData = load('Data/Producer_StJakobstadium.txt');
-consumerData = load('Data/Consumer1_Andreas_Aeberhard.txt');
+%% Initialization
+clear; close all; clc;
+
+%% plot data
+
+producerData = load('..\..\Data\Change38_Producer\Producer_StJakobstadium.txt');
+consumerData = load('..\..\Data\Change38_Consumer\Consumer1_Andreas_Aeberhard.txt');
 
 start = producerData(1,1);
 x = (producerData(:,1) - start)/(24*60*60*1000);
@@ -43,7 +48,7 @@ title('Energiekonsum: Beispiel-Kunde 1');
 xlabel('Tage');
 ylabel('Wh');
 
-consumerData = load('Data/Consumer2_Romano_Zgraggen.txt');
+consumerData = load('..\..\Data\Change38_Consumer\Consumer2_Romano_Zgraggen.txt');
 s = 1/96;
 m = double(size(consumerData,1));
 e = m/96.0;
@@ -77,7 +82,7 @@ ylabel('Wh');
 % xlabel('Tage');
 % ylabel('Wh');
 
-consumerData = load('Data/Consumer3_Peter_Reiser.txt');
+consumerData = load('..\..\Data\Change38_Consumer\Consumer3_Peter_Reiser.txt');
 x = (consumerData(:,1) - consumerData(1,1))/(24*60*60*1000);
 y = consumerData(:,3);
 
@@ -96,7 +101,3 @@ xlabel('Tage');
 ylabel('Wh');
 
 
-
-% trainingStartIndex = 24*7 + 1;
-% trainingEndIndex = length(target) - 24*14;
-% trainingPeriod = trainingStartIndex:trainingEndIndex;

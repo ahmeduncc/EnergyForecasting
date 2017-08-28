@@ -1,6 +1,9 @@
-% producer St. Jakobstadium
+%% Meteomatics forecasting example: Change38 producer St. Jakobstadium
 
-% load metomatics forecast data
+%% Initialization
+clear; close all; clc;
+
+%% load metomatics forecast data
 
 % version = 'matlab_v_1.1';
 % user   = 'bfh';
@@ -15,10 +18,11 @@
 % [dn, data] = time_series_query(user, pwd, server, start_datum, period, ...
 %     resolution, parameters, lat, lon);
 % z = data(:,1)*10^3/4; % transform from MW zu kWh
+load('Data\StJakobstadium_Metomatics.mat');
 
-% load copco data
+%% load copco data
 
-producerData = load('Data/Producer_StJakobstadium_20170608.txt');
+producerData = load('..\..\Data\Change38_Producer\Producer_StJakobstadium_20170608.txt');
 copco_data_length = length(producerData(:,1));
 data_range = 1:copco_data_length;
 empty_y1 = zeros(length(z) - copco_data_length,1);
@@ -35,7 +39,7 @@ y = [producerData(data_range, 3)/10^3; empty_y1]; % kWh
 % y = filter(coeff24hMA, 1, y);
 
 
-% plot time series: full period
+%% plot time series: full period
 
 plot_range = 1:length(y);
 figure(1);
@@ -49,7 +53,7 @@ ylabel('kWh');
 axis tight;
 hold off;
 
-% calculate metrics: full peroid
+%% calculate metrics: full peroid
 
 sum_copco_kWh = sum(y(data_range))/10^3
 sum_meteomatics_kWh = sum(z(data_range))/10^3
@@ -58,7 +62,7 @@ mse_ = mean((y(data_range) - z(data_range)).^2)
 rmse_ = sqrt(mse_)
 mae_ = mae(y(data_range) - z(data_range))
 
-% Data range: Feb Mar
+%% Data range: Feb Mar
 
 feb_mar_range = 5494:11157;
 x_feb_mar = x(feb_mar_range);
@@ -70,7 +74,7 @@ z_feb_mar = z(feb_mar_range);
 % coeff24hMA = ones(1, hoursPerDay)/hoursPerDay;
 % y_feb_mar = filter(coeff24hMA, 1, y_feb_mar);
 
-% plot time series: Feb Mar
+%% plot time series: Feb Mar
 
 figure(2);
 hold on;
@@ -83,7 +87,7 @@ legend('COPCO Sensordaten', 'Meteomatics Prognosen')
 axis tight;
 hold off;
 
-% calculate metrics: Feb, March 2017
+%% calculate metrics: Feb, March 2017
 
 sum_copco_Feb_Mar_kWh = sum(y_feb_mar)/10^3
 sum_meteomatics_Feb_Mar_kWh = sum(z_feb_mar)/10^3
@@ -93,14 +97,14 @@ rmse_Feb_Mar = sqrt(mse_)
 mae_Feb_Mar = mae(y_feb_mar - z_feb_mar)
 
 
-% Data range: April, May, June 2017
+%% Data range: April, May, June 2017
 
 apr_may_index = 11158;
 x_apr_may = x(apr_may_index:end);
 y_apr_may = y(apr_may_index:end);
 z_apr_may = z(apr_may_index:end);
 
-% plot time series: April, May, June 2017
+%% plot time series: April, May, June 2017
 
 figure(3);
 hold on;
@@ -113,7 +117,7 @@ legend('COPCO Sensordaten', 'Meteomatics Prognosen')
 axis tight;
 hold off;
 
-% calculate metrics: April, May, June 2017
+%% calculate metrics: April, May, June 2017
 
 sum_copco_Feb_Mar_kWh = sum(y_apr_may)/10^3
 sum_meteomatics_Feb_Mar_kWh = sum(z_apr_may)/10^3

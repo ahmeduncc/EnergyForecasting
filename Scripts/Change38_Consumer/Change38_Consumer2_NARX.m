@@ -1,18 +1,120 @@
-%% NARX forecasting example: ISO New England dataset for the years 2004 to 2008
+%% NARX forecasting example 2: Change38 consumers
 
-%% Load New England ISO dataset for the years 2004 to 2008
+%% Initialization
+clear; close all; clc;
 
-load 'G:\Daten\Programming\Matlab\Examples\Electricity Load & Price Forecasting\Load\Data\DBLoadData.mat'
-addpath 'G:\Daten\Programming\Matlab\Examples\Electricity Load & Price Forecasting\Util'
+%% load meteomatics data
 
-dates = datetime(data.NumDate,'ConvertFrom','datenum');
-target = data.SYSLoad;
+% version = 'matlab_v_1.1';
+% user   = 'bfh';
+% pwd    = 'Ulupulumo621';
+% server = 'api.meteomatics.com';
+% lat   = 47.54177;
+% lon   = 7.620086;
+% start_datum = '2017-01-31T23:00+00:00';
+% period      = 'P143DT13H';
+% resolution  = 'PT1H'; 
+% parameters = 't_2m:C,dew_point_2m:C'; 
+% [dn, meteoData] = time_series_query(user, pwd, server, start_datum, period, ...
+%     resolution, parameters, lat, lon);
+load '..\Meteomatics\Data\MeteomaticsData_20170624.mat';
+
+%%  load COPCO consumer data
+
+% userId = 'auth0|5819e838bb13c98632bcb858';
+% userId = 'auth0|5819e952bb13c98632bcb88c';
+% userId = 'auth0|5804daf9c74919636e09273d';
+% userId = 'auth0|5809e58b4f8a40514ba9310b';
+% userId = 'auth0|580e06d713660ba533eb283a';
+% userId = 'auth0|58518ab943d6ad4e31ca35f1';
+% userId = 'auth0|584e570fc641b4f41364b7d9';
+% userId = 'auth0|5824fb73944239c04eb414d1';
+% userId = 'auth0|588afb6eb52f602be1ce1ab6';
+% userId = 'auth0|585138fb65a32d5ea65af0f7';
+% userId = 'auth0|587e829a88dc3369e720d4de';
+% userId = 'auth0|589af2e5841735494d320f9c';
+% userId = 'auth0|5890bb4cd3fa39022d7a0d8d';
+% userId = 'auth0|5819f1a8bb13c98632bcb9f8';
+% userId = 'auth0|585134f1b95c657144e74bad';
+% userId = 'auth0|58935004d3f66f4e6c62610c';
+% userId = 'auth0|587638bff94ee950379a86b2';
+% userId = 'auth0|5819f01dbb13c98632bcb9a7';
+% userId = 'auth0|588afca9b52f602be1ce1ac2';
+%- userId = 'auth0|5819eb12bb13c98632bcb8d2';
+userId = 'auth0|5819e9ee2602198a6e5483c1';
+%- userId = 'auth0|588afd37b52f602be1ce1ac9';
+% userId = 'auth0|580104daf6c72a7451e060d9';
+% userId = 'auth0|58a0332ed9e31b0776cd0665';
+% userId = 'auth0|5890bc119f50df24b07b3773';
+%- userId = 'auth0|58af24181624d6057382d0a1';
+% userId = 'auth0|580e13abb1d5eae0595368c4';
+% userId = 'auth0|58ac4255ed51fc08e61f0d42';
+% userId = 'auth0|58ab0e9ded51fc08e61efada';
+%userId = 'auth0|5887de343856aa3546ca0037';
+
+load 'Data\HOUR_CONSUMPTION_20170624.mat';
+
+rows = HOUR_CONSUMPTION_20170624.USER_ID == userId;
+vars = {'START_MILIS', 'CONSUMED_ENERGY'};
+consumerData = HOUR_CONSUMPTION_20170624{rows, vars};
+
+% rows = Consumer_Sum_20170705;
+% vars = {'START_MILIS', 'CONSUMED_ENERGY'};
+% consumerData = Consumer_Sum_20170705{:, vars};
+
+
+%% add missing values
+
+i = 1;
+j = 1;
+currentDate = consumerData(1,1);
+while currentDate < consumerData(end, 1)
+    inputData(j, 1) = consumerData(i, 1);
+    inputData(j, 2) = consumerData(i, 2);
+
+    while currentDate < consumerData(end, 1) && ...
+            consumerData(i + 1, 1) ~= currentDate + 1          
+        j = j + 1;
+        currentDate = currentDate + 1;
+        inputData(j, 1) = currentDate;
+        inputData(j, 2) = 0;
+    end
+    
+    i = i + 1;
+    j = j + 1;
+    currentDate = currentDate + 1;
+end
+inputData(j, 1) = consumerData(i, 1);
+inputData(j, 2) = consumerData(i, 2);
+
+%% convert dates and extract full days
+
+fullDateList = datetime(inputData(:, 1)*60*60, 'ConvertFrom', 'posixtime');
+dateIndex = datenum(fullDateList) >= datenum('2017-02-01') & ...
+    datenum(fullDateList) < datenum('2017-06-24');
+dates = fullDateList(dateIndex);
+target = inputData(dateIndex, 2);
+
+%% plot current energy consumption
+
+figure;
+plot(dates, target, 'b');
+% stem(dates, target, 'b', 'marker', 'none');
+title(['Energieverbrauch Kunde ' userId]);
+xlabel('Tage');
+ylabel('Wh');
+axis tight;
+
+minDate = dates(1);
+maxDate = dates(end);
+display(minDate);
+display(maxDate);
 
 %% create feature matrix
 
 % weather data
-temperature = data.DryBulb; 
-dewPoint = data.DewPnt; 
+temperature = meteoData(dateIndex,1); 
+dewPoint = meteoData(dateIndex,2); 
 
 % date predictors
 hourOfDay = hour(dates);
@@ -26,18 +128,19 @@ prevWeekSameHourLoad = [NaN(168,1); target(1:end-168)];
 prev24HrAveLoad = filter(ones(1,24)/24, 1, target);
 
 % feature matrix
-X = [temperature dewPoint hourOfDay dayOfWeek dayOfMonth monthOfYear];
+X = [temperature dewPoint hourOfDay dayOfWeek];
 
 %% Split the dataset to create a Training and Test set
 
-% Create training set
-trainInd = datenum(dates) < datenum('2008-01-01');
+% create training set
+trainInd = datenum(dates) < datenum('2017-06-01');
 trainX = X(trainInd,:);
 trainY = target(trainInd);
 trainDates = dates(trainInd);
 
-% Create test set and save for later
-testInd = datenum(dates) >= datenum('2008-01-01');
+% create test set 
+testInd = datenum(dates) >= datenum('2017-06-01') & datenum(dates) < ...
+    datenum('2017-06-15');
 testX = X(testInd,:);
 testY = target(testInd);
 testDates = dates(testInd);
@@ -150,7 +253,7 @@ MAE = mean(abs(err));
 MAPE = mean(errpct(~isinf(errpct)));
 MSE = mse(net, Tst, forecastLoad);
 
-fprintf('Trained ANN, test set: \nMean Absolute Percent Error (MAPE): %0.3f%% \nMean Absolute Error (MAE): %0.4f Wh\nMean Squared Error (MSE): %0.4f Wh\n',...
+fprintf('Trained ANN, test set: Mean Absolute Percent Error (MAPE): %0.3f%% \nMean Absolute Error (MAE): %0.4f Wh\nMean Squared Error (MSE): %0.4f Wh\n',...
     MAPE, MAE, MSE)
 fprintf('\n');
 
@@ -166,7 +269,7 @@ netc.name = [net.name ' - Closed Loop'];
 [Xs_cl,Xi_cl,Ai_cl,Ts_cl] = preparets(netc,testXcell,{},testYcell);
 Yc = netc(Xs_cl,Xi_cl,Ai_cl);
 
-numPredictions = 12;
+numPredictions = 24;
 for i = 1:numPredictions
     closedLoopRange = 1:i;
     errcl = cell2mat(Ts_cl(closedLoopRange))' - cell2mat(Yc(closedLoopRange))';

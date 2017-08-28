@@ -1,6 +1,9 @@
-% Neural network toolbox examples
+%% Matlab neural network toolbox examples
 
-% Simulation with Concurrent Inputs in a Static Network:
+%% Initialization
+clear; close all; clc;
+
+%% Simulation with concurrent inputs in a Static Network:
 
 net = linearlayer;
 net.inputs{1}.size = 2;
@@ -11,7 +14,7 @@ net.b{1} = 0;
 P = [1 2 2 3; 2 1 3 1];
 A = net(P)
 
-% Simulation with Sequential Inputs in a Dynamic Network:
+%% Simulation with sequential inputs in a dynamic network:
 
 net = linearlayer([0 1]);
 net.inputs{1}.size = 1;
@@ -38,7 +41,7 @@ A = net(P)
 % Y = net(Xs,Xi)
 % perf = perform(net,Ts,Y)
 
-% simple NAR
+%% simple NAR
 
 T = simplenar_dataset;
 net = narnet(1:2,10);

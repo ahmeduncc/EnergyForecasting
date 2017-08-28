@@ -1,10 +1,15 @@
-% Energy production forecasting test
+%% NARX forecasting example: Change38 producer St. Jakobstadium
+
+%% Initialization
+clear; close all; clc;
+
+%% NARX example
 
 data_range = (23 + 85*96):(23 + 85*96 + 10*96 - 1);
 plot_range = 1:length(data_range);
 % plot_range = 1:96;
 
-producerData = load('Data/Producer_StJakobstadium.txt');
+producerData = load('..\..\Data\Change38_Producer\Producer_StJakobstadium.txt');
 x = datetime(producerData(data_range,1)./1000, 'ConvertFrom', 'posixtime');
 % x = datetime(1480963500, 'ConvertFrom', 'posixtime')
 % datestr(x);

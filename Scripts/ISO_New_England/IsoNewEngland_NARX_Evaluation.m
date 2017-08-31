@@ -83,7 +83,7 @@ hiddenLayerSize = 20;
 % % Setup Division of Data for Training, Validation, Testing
 % % For a list of all data division functions type: help nndivide
 % net.divideFcn = 'dividerand';  % Divide data randomly
-% net.divideMode = 'time';  % Divide up every sample
+% net.divideMode = 'time';  
 % net.divideParam.trainRatio = 70/100;
 % net.divideParam.valRatio = 15/100;
 % net.divideParam.testRatio = 15/100;

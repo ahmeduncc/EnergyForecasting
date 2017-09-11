@@ -1,5 +1,5 @@
 function [errPct, err] = showPerformanceMetrics(net, features, targets, ...
-    title, dates)
+    title, dates, gwhFactor)
 %SHOWPERFORMANCEMETRICS  calculates and prints performance metrics for
 % a given neural network 
 %   calculated metrics: MSE, RMSE, MAE, MAPE
@@ -15,7 +15,12 @@ MAPE = mean(errPct, 'omitnan');
 
 if exist('dates', 'var')
     figure('Name', title);
-    fitPlot(dates, [targets  forecast], err);
+    if exist('gwhFactor', 'var')
+        fitPlot(dates, [targets*gwhFactor  forecast*gwhFactor], ...
+            err*gwhFactor);
+    else
+        fitPlot(dates, [targets  forecast], err);
+    end
 end
 
 fprintf('\n');

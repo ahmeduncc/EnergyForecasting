@@ -141,7 +141,8 @@ showPerformanceMetrics(net, trainX, trainY, 'Training set');
 showPerformanceMetrics(net, valX, valY, 'Validation set');
 
 % test set 
-showPerformanceMetrics(net, testX, testY, 'Test set', dates(tr.testInd)');
+showPerformanceMetrics(net, testX, testY, 'Test set', ...
+    dates(tr.testInd)', 10^(-3));
 % showPerformanceMetrics(net, testX, testY, 'Test set');
 
 

@@ -1,5 +1,5 @@
 function [errPct, err] = showNARXPerformanceMetrics(net, forecast, targets, ...
-    title, dates, showPlot)
+    title, dates, showPlot, gwhFactor)
 %SHOWNARXPERFORMANCEMETRICS calculates and prints performance metrics for
 % NARX model 
 %   calculated metrics: MSE, RMSE, MAE, MAPE
@@ -22,7 +22,12 @@ fprintf('Mean Absolute Percent Error (MAPE): %0.6f%% \n', MAPE);
 
 if exist('showPlot', 'var') && showPlot == 1
     figure('Name', title);
-    fitPlot(dates, [targets forecast], err);
+    if exist('gwhFactor', 'var')
+        fitPlot(dates, [targets*gwhFactor  forecast*gwhFactor], ...
+            err*gwhFactor);
+    else
+        fitPlot(dates, [targets  forecast], err);
+    end
 end
 
 end

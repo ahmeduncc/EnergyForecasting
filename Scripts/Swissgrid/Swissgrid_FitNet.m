@@ -169,6 +169,8 @@ testY = targets(tr.testInd);
 fprintf('\nPerformance Metrics FitNet (Swissgrid)');
 fprintf('\n--------------------------------------\n');
 
+
+
 % entire dataset
 showPerformanceMetrics(net, X, targets, 'Entire dataset');
 
@@ -180,6 +182,6 @@ showPerformanceMetrics(net, valX, valY, 'Validation set');
 
 % test set 
 [errPct, err] = showPerformanceMetrics(net, testX, testY, 'Test set', ...
-    dates(tr.testInd)');
+    dates(tr.testInd)', 10^(-6));
 % showPerformanceMetrics(net, testX, testY, 'Test set');
 
